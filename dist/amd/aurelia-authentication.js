@@ -1,3 +1,4 @@
+/* */ 
 define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurelia-logging', 'aurelia-dependency-injection', 'aurelia-metadata', 'aurelia-event-aggregator', 'aurelia-templating-resources', 'aurelia-api', 'aurelia-router', 'aurelia-fetch-client', './authFilterValueConverter', './authenticatedValueConverter', './authenticatedFilterValueConverter'], function (exports, _extend, _jwtDecode, _aureliaPal, _aureliaPath, _aureliaLogging, _aureliaDependencyInjection, _aureliaMetadata, _aureliaEventAggregator, _aureliaTemplatingResources, _aureliaApi, _aureliaRouter, _aureliaFetchClient, _authFilterValueConverter, _authenticatedValueConverter, _authenticatedFilterValueConverter) {
   'use strict';
 
@@ -1149,18 +1150,6 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
           return;
         }
 
-        if (event.newValue) {
-          _this8.authentication.storage.set(_this8.config.storageKey, event.newValue);
-        } else {
-          _this8.authentication.storage.remove(_this8.config.storageKey);
-        }
-
-        if (event.newValue && _this8.config.autoUpdateToken && _this8.authentication.getAccessToken() && _this8.authentication.getRefreshToken()) {
-          _this8.setResponseObject(_this8.authentication.getResponseObject());
-
-          return;
-        }
-
         logger.info('Stored token changed event');
 
         var wasAuthenticated = _this8.authenticated;
@@ -1216,6 +1205,17 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
 
       var expiredTokenHandler = function expiredTokenHandler() {
         if (_this9.config.autoUpdateToken && _this9.authentication.getAccessToken() && _this9.authentication.getRefreshToken()) {
+		  
+		  var previouslyRefreshedTokenKey = _this9.authentication.storage.get('la');
+		  var currentToken = _this9.authentication.getAccessToken();
+		  var currentTokenKey = currentToken.substring(currentToken.length - 20);
+		  
+		  if (previouslyRefreshedTokenKey == currentTokenKey) {
+			return;
+		  }
+		  
+		  _this9.authentication.storage.set('la', currentTokenKey);
+		  
           _this9.updateToken().catch(function (error) {
             return logger.warn(error.message);
           });
