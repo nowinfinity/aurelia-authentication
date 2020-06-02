@@ -1144,6 +1144,7 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
 
       this.authenticated = false;
       this.timeoutID = 0;
+      this.eventAggregator = eventAggregator;
 
       this.storageEventHandler = function (event) {
         if (event.key !== _this8.config.storageKey || event.newValue === event.oldValue) {
@@ -1160,10 +1161,31 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
         if (wasAuthenticated === _this8.authenticated) {
           return;
         }
-
-        if (_this8.config.storageChangedRedirect) {
-          _aureliaPal.PLATFORM.location.href = _this8.config.storageChangedRedirect;
-        }
+		
+		if (!wasAuthenticated && _this8.authenticated)
+		{
+		  var returnUrl = sessionStorage.getItem('returnUrl');
+		  if (returnUrl) {
+		    _aureliaPal.PLATFORM.location.href = returnUrl;
+		    sessionStorage.removeItem('returnUrl');
+		  }
+		  else {
+            if (_this8.config.storageChangedRedirect) {
+		      _aureliaPal.PLATFORM.location.href = _this8.config.storageChangedRedirect;
+		    }
+          }
+		  _this8.eventAggregator.publish('login_successful');
+		}
+		
+		if (wasAuthenticated && !_this8.authenticated)
+		{
+		  var returnUrl = _aureliaPal.PLATFORM.location.href.replace(_aureliaPal.PLATFORM.location.origin, "");
+		  if (returnUrl.length > 1 && returnUrl.indexOf(_this8.config.loginRoute) === -1) {
+			sessionStorage.setItem('returnUrl', returnUrl);
+		  }
+		  
+		  _aureliaPal.PLATFORM.location.href = _this8.config.loginRoute;
+		}
 
         if (_this8.config.storageChangedReload) {
           _aureliaPal.PLATFORM.location.reload();
@@ -1173,7 +1195,6 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
       this.authentication = authentication;
       this.config = config;
       this.bindingSignaler = bindingSignaler;
-      this.eventAggregator = eventAggregator;
 
       var oldStorageKey = config.tokenPrefix ? config.tokenPrefix + '_' + config.tokenName : config.tokenName;
       var oldToken = authentication.storage.get(oldStorageKey);
@@ -1249,6 +1270,26 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
       this.authentication.setResponseObject(response);
 
       this.updateAuthenticated();
+    };
+	
+	AuthService.prototype.setResponseObjectAndRedirect = function setResponseObjectAndRedirect(response) {
+      this.authentication.setResponseObject(response);
+
+      this.updateAuthenticated();
+
+      var returnUrl = sessionStorage.getItem('returnUrl');
+	  if (returnUrl) {
+		_aureliaPal.PLATFORM.location.href = returnUrl;
+		sessionStorage.removeItem('returnUrl');
+	  }
+	  else {
+        if (this.config.loginRedirect) {
+		  _aureliaPal.PLATFORM.location.href = this.config.loginRedirect;
+		}
+      }	  
+
+      this.eventAggregator.publish('login_successful');
+	  
     };
 
     AuthService.prototype.updateAuthenticated = function updateAuthenticated() {
@@ -1459,8 +1500,16 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
       return this.client.post(this.config.joinBase(this.config.loginUrl), normalized.credentials, normalized.options).then(function (response) {
         _this13.setResponseObject(response);
 
-        _this13.authentication.redirect(normalized.redirectUri, _this13.config.loginRedirect);
-
+		var returnUrl = sessionStorage.getItem('returnUrl');
+		if (returnUrl) {
+		  _aureliaPal.PLATFORM.location.href = returnUrl;
+		  sessionStorage.removeItem('returnUrl');
+		}
+		else {
+		  _this13.authentication.redirect(normalized.redirectUri, _this13.config.loginRedirect);
+		}
+		
+        _this13.eventAggregator.publish('login_successful');
         return response;
       });
     };
@@ -1505,6 +1554,8 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
         _this15.setResponseObject(response);
 
         _this15.authentication.redirect(redirectUri, _this15.config.loginRedirect);
+
+		_this15.eventAggregator.publish('login_successful');
 
         return response;
       });
@@ -1553,6 +1604,10 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
         return route.config.auth === true;
       })) {
         if (!isLoggedIn) {
+		  var returnUrl = _aureliaPal.PLATFORM.location.href.replace(_aureliaPal.PLATFORM.location.origin, "");
+		  if (returnUrl.length > 1 && returnUrl.indexOf(loginRoute) === -1) {
+			sessionStorage.setItem('returnUrl', returnUrl);
+		  }
           return next.cancel(new _aureliaRouter.Redirect(loginRoute));
         }
       } else if (isLoggedIn && routingContext.getAllInstructions().some(function (route) {
