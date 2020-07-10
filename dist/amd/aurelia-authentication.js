@@ -884,7 +884,6 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
           response = Object.assign({}, oldResponse, response);
         }
         this.getDataFromResponse(response);
-        delete response.Claims;
         this.storage.set(this.config.storageKey, JSON.stringify(response));
 
         return;
@@ -1174,9 +1173,11 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
             if (_this8.config.storageChangedRedirect) {
 		      _aureliaPal.PLATFORM.location.href = _this8.config.storageChangedRedirect;
 		    }
-          }
-		  _this8.eventAggregator.publish('login_successful');
-		}
+      }
+      _this8.eventAggregator.publish("login_successful", {
+        "isStorageChangeRedirect": true
+      });
+    }
 		
 		if (wasAuthenticated && !_this8.authenticated)
 		{
@@ -1499,6 +1500,10 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
       }
 
       return this.client.post(this.config.joinBase(this.config.loginUrl), normalized.credentials, normalized.options).then(function (response) {
+        var claims = {};
+        Object.assign(claims, response.Claims);
+        delete response.Claims;
+
         _this13.setResponseObject(response);
 
 		var returnUrl = sessionStorage.getItem('returnUrl');
@@ -1511,6 +1516,7 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
 		}
 		
         _this13.eventAggregator.publish('login_successful');
+        response.Claims = claims;
         return response;
       });
     };
