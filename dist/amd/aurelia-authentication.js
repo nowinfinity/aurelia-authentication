@@ -884,6 +884,7 @@ define(['exports', 'extend', 'jwt-decode', 'aurelia-pal', 'aurelia-path', 'aurel
           response = Object.assign({}, oldResponse, response);
         }
         this.getDataFromResponse(response);
+        delete response.Claims;
         this.storage.set(this.config.storageKey, JSON.stringify(response));
 
         return;

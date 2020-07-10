@@ -1055,7 +1055,6 @@ export class Authentication {
         response = Object.assign({}, oldResponse, response);
       }
       this.getDataFromResponse(response);
-      delete response.Claims;
       this.storage.set(this.config.storageKey, JSON.stringify(response));
 
       return;
